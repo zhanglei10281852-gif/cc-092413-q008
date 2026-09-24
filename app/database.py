@@ -233,7 +233,33 @@ PERMISSIONS = [
     ("announcements.write", "维护公告", "announcements", "write"),
     ("audit.read", "查看审计", "audit", "read"),
     ("jobs.run", "执行后台任务", "jobs", "run"),
+    ("disaster.read", "查看灾情报告", "disaster", "read"),
+    ("disaster.write", "登记灾情报告", "disaster", "write"),
+    ("disaster.read.internal", "查看内部灾情报告", "disaster", "read_internal"),
+    ("disaster.read.restricted", "查看受限灾情与联系人明文", "disaster", "read_restricted"),
+    ("disaster.export", "批量导出灾情报告", "disaster", "export"),
+    ("disaster.export.revoke", "撤销灾情导出令牌", "disaster", "revoke_export"),
 ]
+
+#: 灾情报告分级保护的内置角色：角色 -> 权限点
+DISASTER_ROLE_PERMISSIONS = {
+    "commander": [
+        "disaster.read",
+        "disaster.write",
+        "disaster.read.internal",
+        "disaster.read.restricted",
+        "disaster.export",
+        "disaster.export.revoke",
+    ],
+    "collaborator": ["disaster.read", "disaster.read.internal", "disaster.export"],
+    "public_analyst": ["disaster.read", "disaster.export"],
+}
+
+DISASTER_ROLE_META = {
+    "commander": ("灾情指挥员", "可见全部密级，联系人电话与住址为明文，可导出与撤销令牌"),
+    "collaborator": ("跨部门协作员", "可见公开与内部密级，个人字段为脱敏副本，可导出"),
+    "public_analyst": ("公开汇总查阅员", "仅见公开密级，不含任何可回溯到个人的字段，可导出公开汇总"),
+}
 
 
 def database_path() -> Path:
@@ -307,6 +333,18 @@ def init_db() -> None:
             "INSERT OR IGNORE INTO role_permissions(role_id,permission_id,granted_at) SELECT ?,id,? FROM permissions",
             (administrator, now),
         )
+        for code, (name, description) in DISASTER_ROLE_META.items():
+            connection.execute(
+                "INSERT OR IGNORE INTO roles(code,name,description,is_system,created_at,updated_at) VALUES(?,?,?,1,?,?)",
+                (code, name, description, now, now),
+            )
+            role_id = connection.execute("SELECT id FROM roles WHERE code=?", (code,)).fetchone()[0]
+            for permission_code in DISASTER_ROLE_PERMISSIONS[code]:
+                connection.execute(
+                    "INSERT OR IGNORE INTO role_permissions(role_id,permission_id,granted_at) "
+                    "SELECT ?,id,? FROM permissions WHERE code=?",
+                    (role_id, now, permission_code),
+                )
 
 
 def migrate_db() -> None:
