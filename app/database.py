@@ -231,6 +231,10 @@ PERMISSIONS = [
     ("petitions.read", "查看信访", "petitions", "read"),
     ("petitions.write", "办理信访", "petitions", "write"),
     ("announcements.write", "维护公告", "announcements", "write"),
+    ("reports.read", "查看灾情报告", "reports", "read"),
+    ("reports.write", "上报灾情报告", "reports", "write"),
+    ("reports.export", "导出灾情报告", "reports", "export"),
+    ("reports.policy", "维护报告分级授权", "reports", "policy"),
     ("audit.read", "查看审计", "audit", "read"),
     ("jobs.run", "执行后台任务", "jobs", "run"),
 ]
